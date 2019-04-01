@@ -1,5 +1,4 @@
-pragma solidity 0.4.25;
-
+pragma solidity ^0.5.0;
 contract Betting {
     
     struct Bets {
@@ -10,13 +9,11 @@ contract Betting {
     
     mapping(bytes32 => Bets) public bets;
     
-    function makebet(string _stringSelected) public payable {
+    function makebet(string memory _stringSelected ) public payable {
         // require(msg.value >= minimumBet);
-        bytes32 betId = keccak256(now, msg.sender);
-        
+        bytes32 betId = bytes32(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
         bets[betId].colorSelected = _stringSelected;
         bets[betId].amountBet = msg.value;
         bets[betId].gambler = msg.sender;
-        
     }
 }
