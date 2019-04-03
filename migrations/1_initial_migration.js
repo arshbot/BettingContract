@@ -3,5 +3,5 @@ const Betting = artifacts.require("Betting");
 
 module.exports = function(deployer) {
   deployer.deploy(Migrations);
-  deployer.deploy(Betting);
+  deployer.deploy(Betting, 100);
 };
