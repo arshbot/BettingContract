@@ -49,12 +49,11 @@ contract Betting {
     }
     
     function endBet(string memory _winningColor) public {
-        // zero out all bet transactions
-        running = false;
+        running = false; // stop accepting bets
         // distribute funds for winning color
     }
    
-    function makeBet(string memory _stringSelected ) public payable returns(bytes32) { // returning for testing purposes
+    function makeBet(string memory _stringSelected ) public payable returns(bytes32) {
         require(msg.value >= minimumBet, "did not meet minimum buy-in");
         require(running, "the bet is currently not running");
         require(checkTimeLeft() > 0, "time has run out");
