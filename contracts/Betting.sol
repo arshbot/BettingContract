@@ -1,11 +1,11 @@
 pragma solidity ^0.5.0;
 contract Betting {
     
-    uint256 totalFunds;
+    
     enum colorChoices {red, blue, green, yellow, purple, orange}
     
     struct Bets {
-        colorChoices colorSelected; //TODO: Change to enum
+        colorChoices colorSelected; 
         uint256 amountBet;
         address payable gambler;
     }
@@ -16,6 +16,9 @@ contract Betting {
     // probably show color
     // given current_time so that there are no duplicates in timing out
     
+    event Color(uint256 color);
+    
+    uint256 poolAmount;
     uint256 startTime; // time that betting rounds starts
     uint256 endTime; // time it ends
     uint256 minimumBet; // minimum buyin
@@ -62,7 +65,7 @@ contract Betting {
             }
         }
     }
-       function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
+    function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
         address payable[] memory winners = new address payable[](10);
         uint256 index = 0;
         bool duplicate = false;
@@ -85,7 +88,7 @@ contract Betting {
    }
    
    function payWinnings(uint256 amountOfWinners, address payable gambler) public payable {
-       gambler.transfer(totalFunds / amountOfWinners);
+       gambler.transfer(poolAmount / amountOfWinners);
    }
    
     function makeBet(uint256 _colorSelected ) public payable returns(bytes32) {
@@ -97,12 +100,14 @@ contract Betting {
         bets[betId].amountBet = msg.value;
         bets[betId].gambler = msg.sender;
         betIds.push(betId);
-        totalFunds = totalFunds + msg.value;
+        poolAmount = poolAmount + msg.value;
     }
     
     function winningColor() public returns (uint256) { 
         uint256 sum = sumOfIds();
-        return uint(keccak256(abi.encodePacked(sum)))%6;
+        uint256 color = uint(keccak256(abi.encodePacked(sum)))%6;
+        emit Color(color);
+        return color;
     }
     
     function clearBetIds() public {
@@ -118,16 +123,44 @@ contract Betting {
     }
     
    // for testing 
-    
-   function viewColor(uint256 _winningColor) public pure returns (colorChoices) {
-       return colorChoices(_winningColor);
+   // basic global variables
+   
+   function getBetId() public view returns (bytes32) {
+       return betIds[betIds.length -1]; // returns latest bet made
+       // getting the entire array might not be possible due to web3.js limitations
+       // need more research into this though
+   }
+   function getBetIdLength() public view returns (uint256){
+        return betIds.length;
+   }
+   function getStartTime() public view returns (uint256){
+        return startTime;
+   }
+   function getEndTime() public view returns (uint256){
+        return endTime;
+   }
+   function getMinimumBet() public view returns (uint256){
+        return minimumBet;
+   }
+   function getIsRunning() public view returns (bool){
+        return running;
+   }
+   function getPoolAmount() public view returns (uint256){
+    return poolAmount;
    }
    
-   function viewBetId() public view returns (bytes32) {
-       return betIds[betIds.length -1];
+   // get specific info from betId's
+   
+   function getColorSelected(bytes32 id) public view returns (uint256){
+        return uint(bets[id].colorSelected);
    }
-   function viewBetIdLength() public view returns (uint256){
-    return betIds.length;
+   function getAmountBet(bytes32 id) public view returns (uint256){
+        return bets[id].amountBet;
    }
-
+   function getGambler(bytes32 id) public view returns (address payable){
+        return bets[id].gambler;
+   }
+   function getGambler(bytes32 id) public view returns (){
+        return bets[id].gambler;
+   }
 }
