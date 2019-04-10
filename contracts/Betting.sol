@@ -1,7 +1,5 @@
 pragma solidity ^0.5.0;
 contract Betting {
-    
-    
     enum colorChoices {red, blue, green, yellow, purple, orange}
     
     struct Bets {
@@ -55,12 +53,13 @@ contract Betting {
     }
     
     function endBet() public {
+        require(running==true, "you can't end a bet that isn't running");
         running = false; // stop accepting bets
         // get winning colorChoices
-        colorChoices winningColor = colorChoices(winningColor());
+        colorChoices winningColor = colorChoices(5); // colorChoices(winningColor());
         address payable[] memory winners = getWinners(uint256(winningColor));
-        if(winners.length != 0){
-            for(uint256 i=0; i< winners.length; i++){
+        for(uint256 i=0; i< winners.length; i++){
+            if(winners[i] != address(0)){
                 payWinnings(winners.length, winners[i]);
             }
         }
@@ -69,7 +68,6 @@ contract Betting {
         address payable[] memory winners = new address payable[](10);
         uint256 index = 0;
         bool duplicate = false;
-        // add them to winner array if they are not already
         for(uint256 i=0; i<betIds.length; i++) {
             if(bets[betIds[i]].colorSelected == colorChoices(_winningColor)){
                 for(uint256 j = 0; j < index; j++){
@@ -158,9 +156,6 @@ contract Betting {
         return bets[id].amountBet;
    }
    function getGambler(bytes32 id) public view returns (address payable){
-        return bets[id].gambler;
-   }
-   function getGambler(bytes32 id) public view returns (){
         return bets[id].gambler;
    }
 }
