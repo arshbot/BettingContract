@@ -2,8 +2,7 @@
 ## Environment
 1. Truffle v5.0.7
 1. Solidity 0.5.0
-* added the bare bones to starting, ending, determining winning color, etc.
-
+* may have bugs, but is otherwise fully functional
 ## Tests So Far
 1. `truffle compile`
 1. `truffle develop`
