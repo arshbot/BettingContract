@@ -1,35 +1,33 @@
 pragma solidity ^0.5.0;
 contract Betting {
     
+    uint256 totalFunds;
+    enum colorChoices {red, blue, green, yellow, purple, orange}
+    
     struct Bets {
-        string colorSelected; //TODO: Change to enum
+        colorChoices colorSelected; //TODO: Change to enum
         uint256 amountBet;
-        address gambler;
+        address payable gambler;
     }
     
+    bytes32[] betIds = new bytes32[](10);
     
     event TimeOut(uint256 current_time); // have a listener that watches this event on javascript-side
+    // probably show color
     // given current_time so that there are no duplicates in timing out
     
     uint256 startTime; // time that betting rounds starts
     uint256 endTime; // time it ends
     uint256 minimumBet; // minimum buyin
     bool running; // whether or not there is a round currently ongoing
-
     mapping(bytes32 => Bets) public bets;
     
     constructor(uint256 _minimumBet) public {
         running = false; // shouldn't be started automatically
         minimumBet = _minimumBet; 
+        betIds.length = 0;
     }
     
-    function winningColor(string memory _color) public { 
-        // assumes the color is generated on the javascript-side
-        // https://ethereum.stackexchange.com/questions/191/how-can-i-securely-generate-a-random-number-in-my-smart-contract
-        // smart contracts are deterministic, so true randomness is difficult, but can be done if necessary
-        endBet(_color);
-    }
-
     function startBet(uint256 _endTime) public {
         // holds the start/end times and allows contract to start accepting transactions
         startTime = block.timestamp;
@@ -37,30 +35,99 @@ contract Betting {
         running = true;
     }
     
+    function currentTime() public view returns (int256){
+        return int(endTime - block.timestamp);
+    }
+    
     function checkTimeLeft() public returns (int256){
         // to be called from the javascript-side every second through setInterval
         // theoretically it SHOULDN'T require ether if called via using .call()
         // https://web3js.readthedocs.io/en/1.0/web3-eth.html#eth-call
         // ^ needs testing w/ front-end though
-        if( int(endTime -block.timestamp) < 1){
+        int256 time = currentTime();
+        if(time < 1){
             emit TimeOut(block.timestamp);
         }
         return int(endTime - block.timestamp);
     }
     
-    function endBet(string memory _winningColor) public {
+    function endBet() public {
         running = false; // stop accepting bets
-        // distribute funds for winning color
+        // get winning colorChoices
+        colorChoices winningColor = colorChoices(winningColor());
+        address payable[] memory winners = getWinners(uint256(winningColor));
+        if(winners.length != 0){
+            for(uint256 i=0; i< winners.length; i++){
+                payWinnings(winners.length, winners[i]);
+            }
+        }
     }
+       function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
+        address payable[] memory winners = new address payable[](10);
+        uint256 index = 0;
+        bool duplicate = false;
+        // add them to winner array if they are not already
+        for(uint256 i=0; i<betIds.length; i++) {
+            if(bets[betIds[i]].colorSelected == colorChoices(_winningColor)){
+                for(uint256 j = 0; j < index; j++){
+                    if(bets[betIds[i]].gambler == winners[j]){
+                        duplicate = true;
+                    }
+                }
+                if(!duplicate){
+                    winners[index] = bets[betIds[i]].gambler;
+                    index = index + 1;
+                    duplicate = false;
+                }
+            }
+        return winners;
+       }
+   }
    
-    function makeBet(string memory _stringSelected ) public payable returns(bytes32) {
+   function payWinnings(uint256 amountOfWinners, address payable gambler) public payable {
+       gambler.transfer(totalFunds / amountOfWinners);
+   }
+   
+    function makeBet(uint256 _colorSelected ) public payable returns(bytes32) {
         require(msg.value >= minimumBet, "did not meet minimum buy-in");
         require(running, "the bet is currently not running");
-        require(checkTimeLeft() > 0, "time has run out");
-        bytes32 betId = bytes32(keccak256(abi.encodePacked(block.timestamp, msg.sender)));
-        bets[betId].colorSelected = _stringSelected;
+        require(currentTime() > 0, "time has run out");
+        bytes32 betId = keccak256(abi.encodePacked(block.timestamp, msg.sender)); // casting fucked it
+        bets[betId].colorSelected = colorChoices(_colorSelected);
         bets[betId].amountBet = msg.value;
         bets[betId].gambler = msg.sender;
-        
+        betIds.push(betId);
+        totalFunds = totalFunds + msg.value;
     }
+    
+    function winningColor() public returns (uint256) { 
+        uint256 sum = sumOfIds();
+        return uint(keccak256(abi.encodePacked(sum)))%6;
+    }
+    
+    function clearBetIds() public {
+        betIds.length = 0;
+    }
+    
+    function sumOfIds() public view returns (uint256){
+        uint256 sum = 0;
+        for (uint i=0; i<betIds.length; i++) {
+            sum = sum + uint(betIds[i]);
+        }
+        return sum;
+    }
+    
+   // for testing 
+    
+   function viewColor(uint256 _winningColor) public pure returns (colorChoices) {
+       return colorChoices(_winningColor);
+   }
+   
+   function viewBetId() public view returns (bytes32) {
+       return betIds[betIds.length -1];
+   }
+   function viewBetIdLength() public view returns (uint256){
+    return betIds.length;
+   }
+
 }
