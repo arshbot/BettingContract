@@ -56,7 +56,7 @@ contract Betting {
         require(running==true, "you can't end a bet that isn't running");
         running = false; // stop accepting bets
         // get winning colorChoices
-        colorChoices winningColor = colorChoices(5); // colorChoices(winningColor());
+        colorChoices winningColor = colorChoices(winningColor());
         address payable[] memory winners = getWinners(uint256(winningColor));
         for(uint256 i=0; i< winners.length; i++){
             if(winners[i] != address(0)){
