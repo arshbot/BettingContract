@@ -58,9 +58,16 @@ contract Betting {
         // get winning colorChoices
         colorChoices winningColor = colorChoices(winningColor());
         address payable[] memory winners = getWinners(uint256(winningColor));
-        for(uint256 i=0; i< winners.length; i++){
+        uint256 index = 0;
+        for(uint256 i = 0; i < winners.length; i++){
+            if(winners[i] == address(0)){
+                index = i;
+                break;
+            }
+        }
+        for(uint256 i=0; i< index; i++){
             if(winners[i] != address(0)){
-                payWinnings(winners.length, winners[i]);
+                payWinnings(index, winners[i]);
             }
         }
         clearBetIds();
@@ -88,7 +95,7 @@ contract Betting {
    }
    
    function payWinnings(uint256 amountOfWinners, address payable gambler) public payable {
-       gambler.transfer(poolAmount / amountOfWinners);
+       gambler.transfer(poolAmount/amountOfWinners);
    }
    
     function makeBet(uint256 _colorSelected ) public payable returns(bytes32) {
