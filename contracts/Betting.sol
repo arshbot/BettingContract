@@ -1,38 +1,34 @@
 pragma solidity ^0.5.0;
 contract Betting {
-    enum colorChoices {red, blue, green, yellow, purple, orange}
-    
+    enum colorChoices {red, blue, green, yellow, purple, orange} // feel free to change the colors, it has no impact on the code at all.
     struct Bets {
         colorChoices colorSelected; 
         uint256 amountBet;
         address payable gambler;
     }
     
-    bytes32[] betIds = new bytes32[](10);
-    
-    event TimeOut(uint256 current_time); // have a listener that watches this event on javascript-side
-    // probably show color
-    // given current_time so that there are no duplicates in timing out
-    
-    event Color(uint256 color);
-    
-    uint256 poolAmount;
+    mapping(bytes32 => Bets) public bets;
+    bytes32[] betIds = new bytes32[](10); // holds all betIds
+    uint256 poolAmount; // functionally identical to the contract's balance.
     uint256 startTime; // time that betting rounds starts
     uint256 endTime; // time it ends
     uint256 minimumBet; // minimum buyin
     bool running; // whether or not there is a round currently ongoing
-    mapping(bytes32 => Bets) public bets;
+
+    
+    event TimeOut(uint256 current_time); // have a listener that watches this event on javascript-side
+    event Color(uint256 color); // event emitted when color is chosen
     
     constructor(uint256 _minimumBet) public {
         running = false; // shouldn't be started automatically
         minimumBet = _minimumBet; 
-        betIds.length = 0;
+        betIds.length = 0; // zero betIds at start
     }
     
     function startBet(uint256 _endTime) public {
         // holds the start/end times and allows contract to start accepting transactions
         startTime = block.timestamp;
-        endTime = block.timestamp + _endTime;
+        endTime = block.timestamp + _endTime; // the round will end in "_endTime" seconds
         running = true;
     }
     
@@ -49,55 +45,9 @@ contract Betting {
         if(time < 1){
             emit TimeOut(block.timestamp);
         }
-        return int(endTime - block.timestamp);
+        return time;
     }
     
-    function endBet() public {
-        require(running==true, "you can't end a bet that isn't running");
-        running = false; // stop accepting bets
-        // get winning colorChoices
-        colorChoices winningColor = colorChoices(winningColor());
-        address payable[] memory winners = getWinners(uint256(winningColor));
-        uint256 index = 0;
-        for(uint256 i = 0; i < winners.length; i++){
-            if(winners[i] == address(0)){
-                index = i;
-                break;
-            }
-        }
-        for(uint256 i=0; i< index; i++){
-            if(winners[i] != address(0)){
-                payWinnings(index, winners[i]);
-            }
-        }
-        clearBetIds();
-        poolAmount = 0;
-    }
-    function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
-        address payable[] memory winners = new address payable[](10);
-        uint256 index = 0;
-        bool duplicate = false;
-        for(uint256 i=0; i<betIds.length; i++) {
-            if(bets[betIds[i]].colorSelected == colorChoices(_winningColor)){
-                for(uint256 j = 0; j < index; j++){
-                    if(bets[betIds[i]].gambler == winners[j]){
-                        duplicate = true;
-                    }
-                }
-                if(!duplicate){
-                    winners[index] = bets[betIds[i]].gambler;
-                    index = index + 1;
-                    duplicate = false;
-                }
-            }
-        return winners;
-       }
-   }
-   
-   function payWinnings(uint256 amountOfWinners, address payable gambler) public payable {
-       gambler.transfer(poolAmount/amountOfWinners);
-   }
-   
     function makeBet(uint256 _colorSelected ) public payable returns(bytes32) {
         require(msg.value >= minimumBet, "did not meet minimum buy-in");
         require(running, "the bet is currently not running");
@@ -110,6 +60,57 @@ contract Betting {
         poolAmount = poolAmount + msg.value;
     }
     
+    
+    function endBet() public {
+        require(running==true, "you can't end a bet that isn't running");
+        running = false; // stop accepting bets
+        // get winning colorChoices
+        colorChoices winningColor = colorChoices(winningColor());
+        address payable[] memory winners = getWinners(uint256(winningColor));
+        uint256 index = 0;
+        // gets how many winners there are
+        for(uint256 i = 0; i < winners.length; i++){
+            if(winners[i] == address(0)){
+                index = i;
+                break;
+            }
+        }
+        if(index != 0){ // only distribute funds, clear pool if there's a winner.
+            uint256 splitWinnings = poolAmount / index; // divide the pool by the amount of winners.
+            for(uint256 i=0; i< index; i++){
+                if(winners[i] != address(0)){ another precaution to make sure no zero addresses are paid, probably redundant 
+                    payWinnings(splitWinnings, winners[i]);
+                }
+            }
+            poolAmount = 0;
+        }
+        clearBetIds(); // clear bets regardless of outcome
+    }
+    function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
+        address payable[] memory winners = new address payable[](10); // limit of 10 participants due to this limitation
+        uint256 index = 0;
+        bool duplicate = false;
+        for(uint256 i=0; i<betIds.length; i++) {
+            if(bets[betIds[i]].colorSelected == colorChoices(_winningColor)){
+                for(uint256 j = 0; j < index; j++){
+                    if(bets[betIds[i]].gambler == winners[j]){
+                        duplicate = true;
+                    }
+                }
+                if(!duplicate){
+                    winners[index] = bets[betIds[i]].gambler;
+                    index = index + 1;
+                    
+                }
+                duplicate = false;
+            }
+       }
+       return winners;
+    }
+   
+    function payWinnings(uint256 funds, address payable gambler) public payable {
+       gambler.transfer(funds);
+    }
     function winningColor() public returns (uint256) { 
         uint256 sum = sumOfIds();
         uint256 color = uint(keccak256(abi.encodePacked(sum)))%6;
@@ -117,9 +118,6 @@ contract Betting {
         return color;
     }
     
-    function clearBetIds() public {
-        betIds.length = 0;
-    }  
     function sumOfIds() public view returns (uint256){
         uint256 sum = 0;
         for (uint i=0; i<betIds.length; i++) {
@@ -127,6 +125,10 @@ contract Betting {
         }
         return sum;
     }
+    
+    function clearBetIds() public {
+        betIds.length = 0;
+    }  
     
    // for testing 
    // basic global variables
@@ -153,7 +155,6 @@ contract Betting {
    function getPoolAmount() public view returns (uint256){
     return poolAmount;
    }
-   
    // get specific info from betIds
    function getColorSelected(bytes32 id) public view returns (uint256){
         return uint(bets[id].colorSelected);
