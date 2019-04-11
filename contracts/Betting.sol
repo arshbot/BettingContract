@@ -63,6 +63,8 @@ contract Betting {
                 payWinnings(winners.length, winners[i]);
             }
         }
+        clearBetIds();
+        poolAmount = 0;
     }
     function getWinners(uint256 _winningColor) public view returns (address payable[] memory) {
         address payable[] memory winners = new address payable[](10);
@@ -93,7 +95,7 @@ contract Betting {
         require(msg.value >= minimumBet, "did not meet minimum buy-in");
         require(running, "the bet is currently not running");
         require(currentTime() > 0, "time has run out");
-        bytes32 betId = keccak256(abi.encodePacked(block.timestamp, msg.sender)); // casting fucked it
+        bytes32 betId = keccak256(abi.encodePacked(block.timestamp, msg.sender));
         bets[betId].colorSelected = colorChoices(_colorSelected);
         bets[betId].amountBet = msg.value;
         bets[betId].gambler = msg.sender;
@@ -110,8 +112,7 @@ contract Betting {
     
     function clearBetIds() public {
         betIds.length = 0;
-    }
-    
+    }  
     function sumOfIds() public view returns (uint256){
         uint256 sum = 0;
         for (uint i=0; i<betIds.length; i++) {
@@ -122,7 +123,6 @@ contract Betting {
     
    // for testing 
    // basic global variables
-   
    function getBetId() public view returns (bytes32) {
        return betIds[betIds.length -1]; // returns latest bet made
        // getting the entire array might not be possible due to web3.js limitations
@@ -147,8 +147,7 @@ contract Betting {
     return poolAmount;
    }
    
-   // get specific info from betId's
-   
+   // get specific info from betIds
    function getColorSelected(bytes32 id) public view returns (uint256){
         return uint(bets[id].colorSelected);
    }
