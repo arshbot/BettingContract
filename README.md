@@ -2,7 +2,7 @@
 ## Environment
 1. Truffle v5.0.7
 1. Solidity 0.5.0
-* may have bugs, but is otherwise fully functional
+* known bug: if more than one person wins the bet, the FIRST player to have made the correct betting choice will win the entire pool, while the second winner receives nothing.
 ## Tests So Far
 1. `truffle compile`
 1. `truffle develop`
