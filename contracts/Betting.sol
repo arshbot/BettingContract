@@ -78,7 +78,7 @@ contract Betting {
         if(index != 0){ // only distribute funds, clear pool if there's a winner.
             uint256 splitWinnings = poolAmount / index; // divide the pool by the amount of winners.
             for(uint256 i=0; i< index; i++){
-                if(winners[i] != address(0)){ another precaution to make sure no zero addresses are paid, probably redundant 
+                if(winners[i] != address(0)){ //another precaution to make sure no zero addresses are paid, probably redundant 
                     payWinnings(splitWinnings, winners[i]);
                 }
             }
