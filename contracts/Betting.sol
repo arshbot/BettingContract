@@ -13,6 +13,7 @@ contract Betting {
     uint256 startTime; // time that betting rounds starts
     uint256 endTime; // time it ends
     uint256 minimumBet; // minimum buyin
+    uint256 winningColor;
     bool running; // whether or not there is a round currently ongoing
 
     
@@ -30,6 +31,7 @@ contract Betting {
         startTime = block.timestamp;
         endTime = block.timestamp + _endTime; // the round will end in "_endTime" seconds
         running = true;
+        winningColor = uint(keccak256(abi.encodePacked(block.timestamp, msg.sender))) % 6;
     }
     
     function currentTime() public view returns (int256){
@@ -65,7 +67,6 @@ contract Betting {
         require(running==true, "you can't end a bet that isn't running");
         running = false; // stop accepting bets
         // get winning colorChoices
-        colorChoices winningColor = colorChoices(winningColor());
         address payable[] memory winners = getWinners(uint256(winningColor));
         uint256 index = 0;
         // gets how many winners there are
@@ -111,20 +112,6 @@ contract Betting {
     function payWinnings(uint256 funds, address payable gambler) public payable {
        gambler.transfer(funds);
     }
-    function winningColor() public returns (uint256) { 
-        uint256 sum = sumOfIds();
-        uint256 color = uint(keccak256(abi.encodePacked(sum)))%6;
-        emit Color(color);
-        return color;
-    }
-    
-    function sumOfIds() public view returns (uint256){
-        uint256 sum = 0;
-        for (uint i=0; i<betIds.length; i++) {
-            sum = sum + uint(betIds[i]);
-        }
-        return sum;
-    }
     
     function clearBetIds() public {
         betIds.length = 0;
@@ -154,6 +141,9 @@ contract Betting {
    }
    function getPoolAmount() public view returns (uint256){
     return poolAmount;
+   }
+   function getWinningColor() public view returns (uint256){
+    return winningColor;
    }
    // get specific info from betIds
    function getColorSelected(bytes32 id) public view returns (uint256){
